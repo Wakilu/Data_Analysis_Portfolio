@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/TRUST_DATA/Downloads/WSDA_Music.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="150"/><column_width id="3" width="6158"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,5:mainAlbum"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1">/*
+How many transactions took place between the years 2011 and 2012?
+*/
+
+SELECT
+	count (*)
+FROM
+	Invoice
+WHERE
+	InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;='2012-12-31'
+	
+
+/*
+How much money did WSDA Music make during the same period?
+*/
+
+SELECT
+	sum(Total)
+FROM
+	Invoice
+WHERE
+	InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;='2012-12-31'
+
+	
+/*
+list of customers who made purchases between 2011 and 2012.
+*/
+
+SELECT
+	il.FirstName,
+	il.LastName,
+	t.InvoiceDate,
+	t.total
+FROM
+	Customer il
+INNER JOIN
+	Invoice t
+on 
+	il.CustomerId = t.CustomerId
+WHERE
+	t.InvoiceDate &gt;= '2011-01-01' and t.InvoiceDate &lt;='2012-12-31'
+ORDER by 
+	t.total DESC
+	
+
+/*
+list of customers, sales reps, and total transaction amounts for each customer
+between 2011 and 2012.
+*/
+
+SELECT
+	il.FirstName as CustomerFN,
+	il.LastName as CustomerLN,
+	u.FirstName as SaleRepFN,
+	u.LastName as SalesRepFN,
+	t.total
+FROM
+	Customer il
+INNER JOIN
+	Employee u
+on 
+	il.SupportRepId = u.EmployeeId 
+INNER JOIN
+	Invoice t
+on 
+	t.CustomerId = il.CustomerId
+WHERE
+	t.InvoiceDate &gt;= '2011-01-01' and t.InvoiceDate &lt;='2012-12-31'
+ORDER by 
+	t.total DESC
+	
+	
+/*
+How many transactions are above the average transaction amount during the same
+time period?
+*/
+
+SELECT
+	count(*) As [Num of TRANSACTION Above Avg]
+FROM
+	Invoice
+WHERE
+	total &gt;
+
+	(SELECT
+		round(avg(total), 2) as [Avg TRANSACTION Amount]
+	FROM
+		Invoice
+	WHERE
+		InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;= '2012-12-31')
+AND
+	InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;= '2012-12-31'
+	
+
+/*
+What is the average transaction amount for each year that WSDA Music has been
+in business?
+*/
+
+SELECT
+	round(avg(total), 2) as [Avg TRANSACTION Amount],
+	strftime('%Y', InvoiceDate) As [Year]
+FROM
+	Invoice
+GROUP by
+	strftime('%Y', InvoiceDate)
+
+	
+/*
+list of employees who exceeded the average transaction amount from sales they
+generated during 2011 and 2012
+*/
+
+
+SELECT
+	e.FirstName As EmployeeFN,
+	e.LastName As EmployeeLN,
+	sum(i.total) As TotalSales
+FROM
+	Employee e
+INNER JOIN
+	Customer c
+on 
+	e.EmployeeId = c.SupportRepId
+INNER JOIN
+	Invoice i
+on 
+	i.CustomerId = c.CustomerId
+WHERE 
+	i.total &gt; 11.6
+AND
+	InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;= '2012-12-31'
+GROUP by 
+	e.FirstName,
+	e.LastName
+	
+ORDER by
+		e.LastName
+
+	
+/*
+Create a Commission Payout column that displays each employee’s commission
+based on 15% of the sales transaction amount
+*/
+
+SELECT
+	e.FirstName As Employee_FN,
+	e.LastName As Employee_LN,
+	sum(i.total) As TotalSales,
+	round(sum(i.total)*.15, 2) As CommissionPayout
+FROM
+	Employee e
+INNER JOIN
+	Customer c
+on 
+	e.EmployeeId = c.SupportRepId
+INNER JOIN
+	Invoice i
+on 
+	i.CustomerId = c.CustomerId
+WHERE 
+	InvoiceDate &gt;= '2011-01-01' and InvoiceDate &lt;= '2012-12-31'
+GROUP by
+	e.FirstName,
+	e.LastName
+ORDER by
+	e.LastName
+
+	
+/*
+Which employee made the highest commission?
+*/
+
+--Jane Peacock WITH $199.77
+
+
+/*
+List the customers that Jane Peacock supported.
+*/
+
+SELECT
+	c.FirstName As Customer_FN,
+	c.LastName As Customer_LN,
+	e.FirstName As Employee_FN,
+	e.LastName As Employee_LN,
+	sum(i.total) As TotalSales,
+	round(sum(i.total)*.15, 2) As CommissionPayout
+FROM
+	Employee e
+INNER JOIN
+	Customer c
+on 
+	e.EmployeeId = c.SupportRepId
+INNER JOIN
+	Invoice i
+on 
+	i.CustomerId = c.CustomerId
+WHERE 
+	i.InvoiceDate &gt;= '2011-01-01' and i.InvoiceDate &lt;= '2012-12-31'
+AND
+	e.LastName = 'Peacock'
+GROUP by
+	c.FirstName,
+	c.LastName,
+	e.FirstName,
+	e.LastName
+ORDER by
+	TotalSales DESC
+
+
+/*
+Which customer made the highest purchase?
+*/
+
+-- John Doeein with $1000.86 
+
+
+/*
+let's take a look at this customer record—does it look suspicious?
+*/
+
+SELECT *
+FROM 
+	Customer c
+WHERE
+	c.LastName = 'Doeein'
+	
+--Yes it look suspicious
+
+/*
+Who do you conclude is our primary person of interest?
+*/
+
+-- Jane Peacock	</sql><current_tab id="0"/></tab_sql></sqlb_project>
